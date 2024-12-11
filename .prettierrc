@@ -1,0 +1,29 @@
+{
+    "semi": true,
+    "tabWidth": 2,
+    "printWidth": 100,
+    "singleQuote": true,
+    "trailingComma": "all",
+    "overrides": [
+      {
+        "files": "*.sol",
+        "options": {
+          "parser": "solidity-parse",
+          "printWidth": 100,
+          "tabWidth": 4,
+          "useTabs": false,
+          "singleQuote": false,
+          "bracketSpacing": true
+        }
+      },
+      {
+        "files": ["*.js", "*.ts"],
+        "options": {
+          "parser": "babel",
+          "tabWidth": 2,
+          "singleQuote": true,
+          "trailingComma": "es5"
+        }
+      }
+    ]
+  }

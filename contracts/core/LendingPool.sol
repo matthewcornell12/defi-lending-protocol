@@ -9,12 +9,11 @@ contract LendingPool is ReentrancyGuard, Pausable {
     uint256 constant MIN_COLLATERAL_RATIO = 150; // 150% collateralization required
 
     // State Variables
-    mapping (address => uint256) public userCollateral;
+    mapping(address => uint256) public userCollateral;
     uint256 public totalCollateral;
 
-    mapping (address => uint256) public userBorrowed;
+    mapping(address => uint256) public userBorrowed;
     uint256 public totalBorrowed;
-
 
     // Event definitions
     event Deposit(address indexed user, uint256 amount);
@@ -34,26 +33,35 @@ contract LendingPool is ReentrancyGuard, Pausable {
     }
 
     function withdrawal(uint256 amount) public nonReentrant {
-        require(userCollateral[msg.sender] >= amount, "Cannot withdraw more ETH than user's balance");
+        require(
+            userCollateral[msg.sender] >= amount,
+            "Cannot withdraw more ETH than user's balance"
+        );
         totalCollateral -= amount;
         userCollateral[msg.sender] -= amount;
 
-        (bool success, ) = msg.sender.call{value: amount}("");
+        (bool success, ) = msg.sender.call{ value: amount }("");
         require(success, "Withdrawal Failed");
         emit Withdrawal(msg.sender, amount);
     }
 
     function borrowFunds(uint256 amount) public nonReentrant {
         uint256 userTotalBorrowed = userBorrowed[msg.sender] + amount;
-        require(userCollateral[msg.sender] * 100 >=  userTotalBorrowed * MIN_COLLATERAL_RATIO, "User does not have enough collateral for this loan");
+        require(
+            userCollateral[msg.sender] * 100 >= userTotalBorrowed * MIN_COLLATERAL_RATIO,
+            "User does not have enough collateral for this loan"
+        );
         require(amount > 0, "Must borrow more than 0 ETH");
-        require(address(this).balance > amount, "Contract does not have enough funds for this loan");
+        require(
+            address(this).balance > amount,
+            "Contract does not have enough funds for this loan"
+        );
 
         userBorrowed[msg.sender] += amount;
         totalBorrowed += amount;
 
-        (bool success, ) = msg.sender.call{value: amount}("");
-        require (success, "Loan failed");
+        (bool success, ) = msg.sender.call{ value: amount }("");
+        require(success, "Loan failed");
         emit FundsBorrowed(msg.sender, amount);
     }
 }
