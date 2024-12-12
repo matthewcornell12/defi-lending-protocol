@@ -23,20 +23,14 @@ contract LendingPool is ReentrancyGuard, Pausable {
     event FundsRepaid(address indexed user, uint256 amount, uint256 balanceRemaining);
 
     // Function definitions
-    function deposit() public payable nonReentrant {
-        require(msg.value > 0, "User must deposit more than 0 ETH");
-
+    function deposit() public payable validPayableAmount nonReentrant {
         userCollateral[msg.sender] += msg.value;
         totalCollateral += msg.value;
 
         emit Deposit(msg.sender, msg.value);
     }
 
-    function withdrawal(uint256 amount) public nonReentrant {
-        require(
-            userCollateral[msg.sender] >= amount,
-            "Cannot withdraw more ETH than user's balance"
-        );
+    function withdrawal(uint256 amount) public hasSufficientCollateral(amount) nonReentrant {
         totalCollateral -= amount;
         userCollateral[msg.sender] -= amount;
 
@@ -45,16 +39,13 @@ contract LendingPool is ReentrancyGuard, Pausable {
         emit Withdrawal(msg.sender, amount);
     }
 
-    function borrowFunds(uint256 amount) public nonReentrant {
+    function borrowFunds(
+        uint256 amount
+    ) public validAmount(amount) contractHasAvailableFunds(amount) nonReentrant {
         uint256 userTotalBorrowed = userBorrowed[msg.sender] + amount;
         require(
             userCollateral[msg.sender] * 100 >= userTotalBorrowed * MIN_COLLATERAL_RATIO,
             "User does not have enough collateral for this loan"
-        );
-        require(amount > 0, "Must borrow more than 0 ETH");
-        require(
-            address(this).balance > amount,
-            "Contract does not have enough funds for this loan"
         );
 
         userBorrowed[msg.sender] += amount;
@@ -63,5 +54,37 @@ contract LendingPool is ReentrancyGuard, Pausable {
         (bool success, ) = msg.sender.call{ value: amount }("");
         require(success, "Loan failed");
         emit FundsBorrowed(msg.sender, amount);
+    }
+
+    function repayFunds() public payable validPayableAmount nonReentrant {
+        require(msg.value <= userBorrowed[msg.sender], "Cannot repay more than owed");
+
+        userBorrowed[msg.sender] -= msg.value;
+        totalBorrowed -= msg.value;
+
+        emit FundsRepaid(msg.sender, msg.value, userBorrowed[msg.sender]);
+    }
+
+    modifier validPayableAmount() {
+        require(msg.value > 0, "Transaction must have more than 0 ETH");
+        _;
+    }
+
+    modifier validAmount(uint256 amount) {
+        require(amount > 0, "Argument amount must be more than 0 ETH");
+        _;
+    }
+
+    modifier hasSufficientCollateral(uint256 amount) {
+        require(
+            userCollateral[msg.sender] >= amount,
+            "User does not have enough collateral for withdrawal"
+        );
+        _;
+    }
+
+    modifier contractHasAvailableFunds(uint256 amount) {
+        require(address(this).balance >= amount, "Contract does not have enough funds");
+        _;
     }
 }
